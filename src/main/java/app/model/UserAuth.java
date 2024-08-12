@@ -1,11 +1,13 @@
 package app.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
+import java.util.*;
+
 @Entity
 @Table(name="usr",schema = "public")
 public class UserAuth implements UserDetails {
@@ -35,16 +37,21 @@ public class UserAuth implements UserDetails {
         this.password = password;
     }
 
-    public void setRole(String role){
+    public void setRoles(String role){
+
         this.role = role;
     }
 
-    public String getRole(){
+    public String getRoles(){
         return role;
     }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return null;
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority(getRoles()));
+        return AuthorityUtils.createAuthorityList(getRoles());
+
     }
 
     @Override

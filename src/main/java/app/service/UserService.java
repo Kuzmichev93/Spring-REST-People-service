@@ -1,5 +1,6 @@
 package app.service;
 
+import app.model.Role;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,13 +21,13 @@ import org.springframework.stereotype.Service;
 import app.reprository.UserRepository;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 public class UserService implements UserDetailsService {
     private UserRepository userRepository;
-
 
     @Autowired
     public UserService(UserRepository userRepository){
@@ -36,6 +37,7 @@ public class UserService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         UserAuth user = userRepository.findByUsername(username);
+
 
         return user;
     }
@@ -49,10 +51,15 @@ public class UserService implements UserDetailsService {
             jsonObject.put("Error","Имя содержит не валидное значение");
             return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.BAD_REQUEST);
         }
+        if(userRepository.existsByUsername(userAuth.getUsername())){
+            jsonObject.put("Error","Пользователь уже зарегистрирован");
+            return new ResponseEntity<>(String.valueOf(jsonObject),HttpStatus.BAD_REQUEST);
+        }
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         String password = userAuth.getPassword();
 
         userAuth.setPassword(bCryptPasswordEncoder.encode(userAuth.getPassword()));
+        userAuth.setRoles(Role.USER.toString());
         userRepository.save(userAuth);
 
         request.login(userAuth.getUsername(),password);
@@ -62,6 +69,7 @@ public class UserService implements UserDetailsService {
 
     public ResponseEntity<String> authUser(HttpServletRequest request,UserAuth userAuth) throws ServletException, JSONException {
         JSONObject jsonObject = new JSONObject();
+
         if (userRepository.existsByUsername(userAuth.getUsername())){
             request.login(userAuth.getUsername(),userAuth.getPassword());
             jsonObject.put("Message","Пользователь вошел в систему");

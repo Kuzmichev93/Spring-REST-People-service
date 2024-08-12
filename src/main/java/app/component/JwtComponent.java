@@ -1,12 +1,13 @@
 package app.component;
 
 import app.model.UserAuth;
+import com.auth0.jwt.exceptions.JWTDecodeException;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
+
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.stereotype.Component;
 
 
@@ -18,43 +19,44 @@ import java.util.Date;
 
 @Component
 public class JwtComponent {
-    private final LocalDateTime now = LocalDateTime.now();
-    @Value("${jwt.secret.access}") String jwtAccessSecret;
-    @Value("${jwt.secret.refresh}") String jwtRefreshSecret;
-    private Key accessSecret;
-    private Key refreshSecret;
+
+    private String jwtAccessSecret = "qBTmv4oXFFR2GwjexDJ4t6fsIUIUhhXqlktXjXdkcyygs8nPVEwMfo29VDRRepYDVV5IkIxBMzr7OEHXEHd37w==";
+    private  String jwtRefreshSecret = "zL1HB3Pch05Avfynovxrf/kpF9O2m4NCWKJUjEp27s9J2jEG3ifiKCGylaZ8fDeoONSTJP/wAzKawB8F9rOMNg==";
+    private Key accessSecret =  Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtAccessSecret));
+    private Key refreshSecret = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtRefreshSecret));
 
 
     public String createtAccessToken(UserAuth userAuth){
-
-        Instant access = now.plusMinutes(5).atZone(ZoneId.systemDefault()).toInstant();
+        LocalDateTime now = LocalDateTime.now();
+        Instant access = now.plusMinutes(1).atZone(ZoneId.systemDefault()).toInstant();
         Date maxdate = Date.from(access);
-        accessSecret  = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtAccessSecret));
 
         String token = Jwts.builder()
                 .setSubject(userAuth.getUsername())
                 .setExpiration(maxdate)
                 .signWith(accessSecret)
-                .claim("id",userAuth.getId())
+                .claim("login",userAuth.getUsername())
                 .compact();
         return token;
     }
 
-    public String createRefreshToken(){
+    public String createRefreshToken(UserAuth userAuth){
+        LocalDateTime now = LocalDateTime.now();
         Instant access = now.plusDays(10).atZone(ZoneId.systemDefault()).toInstant();
         Date maxdate = Date.from(access);
-        refreshSecret  = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtRefreshSecret));
 
         String token = Jwts.builder()
 
+                .claim("login",userAuth.getUsername())
                 .setExpiration(maxdate)
                 .signWith(refreshSecret)
-
                 .compact();
         return token;
     }
 
     public boolean validateAccessToken(String accessToken){
+
+        System.out.println(accessToken);
         return validate(accessToken,accessSecret);
     }
 
@@ -70,7 +72,7 @@ public class JwtComponent {
                     .parseClaimsJws(token);
             return true;
         }
-        catch (ExpiredJwtException expEx){
+        catch (JWTDecodeException expEx){
             expEx.getMessage();
         }
         return false;
@@ -85,6 +87,7 @@ public class JwtComponent {
     }
 
     private Claims getBodyToken(String token, Key secret){
+
         return Jwts.parserBuilder()
                 .setSigningKey(secret)
                 .build()
