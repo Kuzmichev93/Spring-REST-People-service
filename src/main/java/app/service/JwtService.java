@@ -1,6 +1,7 @@
 package app.service;
 
 import app.component.JwtComponent;
+import app.exeption.СustomException;
 import app.model.JwtResponse;
 import app.model.UserAuth;
 import app.reprository.UserRepository;
@@ -31,9 +32,11 @@ public class JwtService {
         this.jwtComponent = jwtComponent;
     }
 
-    public JSONObject getAlltoken(UserAuth userAuth) throws JSONException {
+    public JSONObject getAlltoken(UserAuth userAuth) throws JSONException, СustomException {
         JSONObject jsonObject = new JSONObject();
-        System.out.println(userRepository.existsByUsername(userAuth.getUsername()));
+        if(userAuth.getUsername()==null){
+            throw new СustomException("Тело сообщения должно содерать поле username",HttpStatus.BAD_REQUEST);
+        }
         if(userRepository.existsByUsername(userAuth.getUsername())){
             String accessToken = new JwtComponent().createtAccessToken(userAuth);
             String refreshToken = new JwtComponent().createRefreshToken(userAuth);
@@ -44,50 +47,53 @@ public class JwtService {
 
             return jsonObject;
         }
-        jsonObject.put("Error","Пользователя нет в бд");
+        else{
+            throw new СustomException("Пользователя нет в бд",HttpStatus.NOT_FOUND);
+        }
+
+    }
+
+    public JSONObject getAccessToken(JwtResponse jwtResponse) throws JSONException, СustomException {
+        JSONObject jsonObject = new JSONObject();
+        if(jwtResponse.getRefreshToken() == null){
+            throw new СustomException("Тело сообщения должно содерать поле refreshToken",HttpStatus.BAD_REQUEST);
+        }
+        jwtComponent.validateRefreshToken(jwtResponse.getRefreshToken());
+        Claims refreshBody = jwtComponent.getBodyRefreshToken(jwtResponse.getRefreshToken());
+        String login = (String) refreshBody.get("login");
+        if(jwtResponse.getRefreshToken().equals(refreshmap.get(login))) {
+            UserAuth userAuth = userRepository.findByUsername(login);
+            if (userAuth.getUsername() != null) {
+                String accesstoken = jwtComponent.createtAccessToken(userAuth);
+
+                jsonObject.put("accesstoken", accesstoken);
+                return jsonObject;
+            }
+            throw new СustomException("Пользователя нет в бд", HttpStatus.NOT_FOUND);
+        }
+        throw new СustomException("Введенный refreshtoken больше не содержится в бд", HttpStatus.NOT_FOUND);
+
+
+    }
+
+    public JSONObject getRefreshToken(JwtResponse jwtResponse) throws JSONException, СustomException {
+        String token = jwtResponse.getRefreshToken();
+        JSONObject jsonObject = new JSONObject();
+
+        if(jwtResponse.getRefreshToken() == null){
+            throw new СustomException("Тело сообщения должно содержать поле refreshToken",HttpStatus.BAD_REQUEST);
+        }
+
+        jwtComponent.validateRefreshToken(token);
+        Claims tokenBody = jwtComponent.getBodyRefreshToken(token);
+        UserAuth userAuth = userRepository.findByUsername((String) tokenBody.get("login"));
+        String newRefreshToken = jwtComponent.createRefreshToken(userAuth);
+        refreshmap.put(userAuth.getUsername(),newRefreshToken);
+        jsonObject.put("refreshtoken",newRefreshToken);
 
         return jsonObject;
-    }
 
-    public ResponseEntity<String> getAccessToken(JwtResponse jwtResponse) throws JSONException {
-        JSONObject jsonObject = new JSONObject();
-        if(jwtComponent.validateRefreshToken(jwtResponse.getRefreshToken())){
-            Claims refreshBody = jwtComponent.getBodyRefreshToken(jwtResponse.getRefreshToken());
-            String login = (String) refreshBody.get("login");
-            if(jwtResponse.getRefreshToken().equals(refreshmap.get(login))){
-                UserAuth userAuth = userRepository.findByUsername(login);
-                if(userAuth.getUsername()!=null){
-                    String accesstoken = jwtComponent.createtAccessToken(userAuth);
 
-                    jsonObject.put("accesstoken",accesstoken);
-                    return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.OK);
-                }
-                jsonObject.put("Error","Пользователя нет в бд");
-                return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.NOT_FOUND);
-            }
-            jsonObject.put("Error","login в refreshtoken не действителен ");
-            return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.BAD_REQUEST);
-        }
-        jsonObject.put("Error","Время существования refreshtoken закончилось");
-        return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.BAD_REQUEST);
-
-    }
-
-    public ResponseEntity<String> getRefreshToken(JwtResponse jwtResponse) throws JSONException {
-        String token = jwtResponse.getRefreshToken();
-
-        JSONObject jsonObject = new JSONObject();
-        if(jwtComponent.validateRefreshToken(token)){
-                Claims tokenBody = jwtComponent.getBodyRefreshToken(token);
-                UserAuth userAuth = userRepository.findByUsername((String) tokenBody.get("login"));
-                String newRefreshToken = jwtComponent.createRefreshToken(userAuth);
-                refreshmap.put(userAuth.getUsername(),newRefreshToken);
-                jsonObject.put("refreshtoken",newRefreshToken);
-                return new ResponseEntity<>(String.valueOf(jsonObject),HttpStatus.OK);
-            }
-
-        jsonObject.put("Error","Данный refreshtoken недействителен");
-        return new ResponseEntity<>(String.valueOf(jsonObject),HttpStatus.BAD_REQUEST);
     }
 
 }

@@ -1,13 +1,14 @@
 package app.component;
 
+import app.exeption.СustomException;
 import app.model.UserAuth;
-import com.auth0.jwt.exceptions.JWTDecodeException;
-import io.jsonwebtoken.Claims;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import io.jsonwebtoken.*;
 
-import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 
@@ -54,28 +55,31 @@ public class JwtComponent {
         return token;
     }
 
-    public boolean validateAccessToken(String accessToken){
-
-        System.out.println(accessToken);
-        return validate(accessToken,accessSecret);
+    public boolean validateAccessToken(String accessToken) throws СustomException {
+        try{
+            return validate(accessToken,accessSecret);
+        }
+        catch (SignatureException e){
+            throw new СustomException("Access токен не активен", HttpStatus.UNAUTHORIZED);
+        }
     }
 
-    public boolean validateRefreshToken(String refreshToken){
-        return validate(refreshToken,refreshSecret);
+    public boolean validateRefreshToken(String refreshToken) throws СustomException {
+        try {
+            return validate(refreshToken,refreshSecret);
+        }
+        catch (SignatureException e){
+            throw new СustomException("Refresh токен не активен", HttpStatus.UNAUTHORIZED);
+        }
     }
 
     private boolean validate(String token,Key secret){
-        try {
-            Jwts.parserBuilder()
-                    .setSigningKey(secret)
-                    .build()
-                    .parseClaimsJws(token);
-            return true;
-        }
-        catch (JWTDecodeException expEx){
-            expEx.getMessage();
-        }
-        return false;
+        Jwts.parserBuilder()
+                .setSigningKey(secret)
+                .build()
+                .parseClaimsJws(token);
+        return true;
+
     }
 
     public Claims getBodyAccessToken(String accessToken){

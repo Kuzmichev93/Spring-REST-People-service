@@ -4,6 +4,7 @@ import app.component.JwtComponent;
 import app.reprository.UserRepository;
 import app.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import app.service.UserService;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig {
@@ -28,6 +31,8 @@ public class WebSecurityConfig {
 
 
     @Autowired
+    @Qualifier("handlerExceptionResolver")
+    private HandlerExceptionResolver resolver;
     public WebSecurityConfig(UserService userService,
                              JwtComponent jwtComponent,
                              UserRepository userRepository
@@ -39,21 +44,19 @@ public class WebSecurityConfig {
 
 
 
+
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http.authorizeHttpRequests((authorizeHttpRequests) ->
-                authorizeHttpRequests.requestMatchers("/registration", "/auth", "/exit","api/auth/refreshtoken",
+                authorizeHttpRequests.requestMatchers("/registration","/test", "/auth", "/exit","api/auth/refreshtoken",
                         "api/auth/login","api/auth/accesstoken").permitAll()
                         .anyRequest().authenticated()
         ).csrf((arg) -> arg.disable())
-                .addFilter(new AuthenticationFilter(authenticationManager(),jwtComponent, userRepository));
+                .addFilter(new AuthenticationFilter(authenticationManager(),jwtComponent, userRepository,resolver));
                 //.httpBasic(Customizer.withDefaults());
-
-
-
 
         return http.build();
 
