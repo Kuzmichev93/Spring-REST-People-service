@@ -1,5 +1,6 @@
 package app.service;
 
+import app.exeption.СustomException;
 import app.model.Role;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -67,15 +68,21 @@ public class UserService implements UserDetailsService {
         return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.OK);
     }
 
-    public ResponseEntity<String> authUser(HttpServletRequest request,UserAuth userAuth) throws ServletException, JSONException {
+    public ResponseEntity<String> authUser(HttpServletRequest request,UserAuth userAuth) throws ServletException, JSONException, СustomException {
         JSONObject jsonObject = new JSONObject();
-
+        if(!SecurityContextHolder.getContext().getAuthentication().getName().equals("anonymousUser")){
+            throw new СustomException("Пользователь уже авторизовался",HttpStatus.BAD_REQUEST);
+        }
+        System.out.println(SecurityContextHolder.getContext().getAuthentication().getName());
         if (userRepository.existsByUsername(userAuth.getUsername())){
             request.login(userAuth.getUsername(),userAuth.getPassword());
             jsonObject.put("Message","Пользователь вошел в систему");
+
             return new ResponseEntity<>(String.valueOf(jsonObject),HttpStatus.OK);
         }
+
         Pattern pat =  Pattern.compile("[^a-zа-я]",Pattern.CASE_INSENSITIVE);
+        System.out.println(userAuth.getUsername());
         Matcher mat = pat.matcher(userAuth.getUsername());
         if(mat.find()){
             jsonObject.put("Error","Имя содержит не валидное значение");
