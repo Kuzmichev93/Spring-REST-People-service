@@ -2,7 +2,12 @@ package app.controller;
 
 
 import app.exeption.СustomException;
+import app.model.Laptop;
+import app.model.TV;
+import app.reprository.LaptopRepository;
+import app.reprository.TVRepository;
 import app.service.LaptopService;
+import app.service.ProductService;
 import app.service.TVService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.json.JSONArray;
@@ -23,36 +28,45 @@ import java.util.HashMap;
 @RestController
 @RequestMapping("tv")
 public class TVController {
-    private TVService tvService;
+    //private TVService tvService;
+    private ProductService<TV, TVRepository> productService;
+    private TV tv;
     @Autowired
+    public TVRepository tvRepository;
+   /* @Autowired
     public TVController(TVService tvService){
         this.tvService = tvService;
 
-    }
+    }*/
 
     @PostMapping(value = "create",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> createProduct(@RequestParam String name, String description, String price, MultipartFile img) throws JSONException, СustomException, IOException {
-        JSONObject jsonObject = tvService.addProduct(name,description,price,img);
+        tv = new TV();
+        String catalog = "tv";
+        productService = new ProductService(tv,tvRepository);
+        JSONObject jsonObject = productService.addProduct(name,description,price,img,catalog);
         return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.OK);
     }
     @GetMapping(value = "product/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> getProduct(@PathVariable String id) throws JSONException, СustomException {
-        JSONObject jsonObject = tvService.getProduct(Integer.valueOf(id));
-
+        tv = new TV();
+        productService = new ProductService(tv,tvRepository);
+        JSONObject jsonObject = productService.getProduct(Integer.valueOf(id));
         return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.OK);
     }
 
     @GetMapping(value = "products",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> getProducts(HttpServletResponse response) throws JSONException, СustomException, InterruptedException {
 
-        JSONArray jsonObject = tvService.getProducts();
+        productService = new ProductService(tvRepository);
+        JSONArray jsonObject = productService.getProducts();
         return new ResponseEntity<>(String.valueOf(jsonObject), HttpStatus.OK);
     }
 
     @GetMapping(value = "pagination",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HashMap> getPagination(HttpServletResponse response) throws JSONException, СustomException {
-
-        HashMap<Integer, ArrayList> pages = tvService.getPaginations();
+        productService = new ProductService(tvRepository);
+        HashMap<Integer, ArrayList> pages = productService.getPaginations();
         HttpHeaders headers = new HttpHeaders();
         headers.set("size",String.valueOf(pages.size()));
 
@@ -61,8 +75,8 @@ public class TVController {
 
     @PostMapping(value = "ids",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> getPag(@RequestBody String ids) throws JSONException, СustomException, InterruptedException {
-
-        JSONArray jsonArray = tvService.getProducts(ids);
+        productService = new ProductService(tvRepository);
+        JSONArray jsonArray = productService.getProducts(ids);
         return new ResponseEntity<>(String.valueOf(jsonArray), HttpStatus.OK);
     }
 

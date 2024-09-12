@@ -21,8 +21,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
-@Service
+//@Service
 public class TVService {
+    /* Заменен на обобщенный класс*/
     @Autowired
     public TVRepository repository;
 

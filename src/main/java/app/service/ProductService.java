@@ -2,43 +2,84 @@ package app.service;
 
 import app.exeption.СustomException;
 import app.model.Laptop;
+import app.model.Product;
 import app.reprository.LaptopRepository;
-import app.utils.Pagination;
 import app.utils.CreateProduct;
+import app.utils.Pagination;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.*;
-
-//@Service
-/*Заменен на обобщенный класс*/
-public class LaptopService {
-
-    @Autowired
-    public LaptopRepository laptopRepository;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
 
 
-    public JSONObject addProduct(String name,String description,String price,MultipartFile img) throws СustomException, IOException, JSONException {
-        Laptop laptop = new Laptop();
-        String catalog = "laptop";
-        CreateProduct<Laptop,LaptopRepository> productService = new CreateProduct<>();
-        JSONObject jsonObject = productService.createProduct(laptop,laptopRepository,name,description,price,img,catalog);
-        return jsonObject;
+public class ProductService<T extends Product,E extends JpaRepository> {
+    private T obj;
+    private E repository;
+    private String path = "D:/springapp/src/main/resources/img/%s/%s";
+    private String host = "http://localhost:8080/img/%s/%s";
+    public ProductService(T obj,E repository){
+        this.obj = obj;
+        this.repository = repository;
+    }
+    public ProductService(E repository){
 
+        this.repository = repository;
     }
 
+
+    public JSONObject addProduct(String name, String description, String price, MultipartFile img,String catalog) throws СustomException, IOException, JSONException {
+        JSONObject jsonObject = new JSONObject();
+        JSONArray jsonArray = new JSONArray();
+        if(name==null || description==null || price==null || img==null){
+            throw new СustomException("Поля name, description, price обязательны к заполнению",HttpStatus.BAD_REQUEST);
+        }
+
+
+        try{
+            obj.setName(name);
+            obj.setDescription(description);
+            obj.setPrice(Integer.valueOf(price));
+
+            obj.setHrefimg(String.format(host,catalog,img.getOriginalFilename()));
+            repository.save(obj);
+
+        }
+        catch (Exception e){
+            throw new СustomException(e.getMessage(),HttpStatus.BAD_REQUEST);
+        }
+
+        try(FileOutputStream fileOutputStream = new FileOutputStream(String.format(path,catalog,img.getOriginalFilename()))){
+
+            fileOutputStream.write(img.getBytes());
+        }
+
+        jsonObject.put("id",obj.getId());
+        jsonObject.put("name",obj.getName());
+        jsonObject.put("description",obj.getDescription());
+        jsonObject.put("price",obj.getPrice());
+        jsonObject.put("hrefimg",obj.getHrefimg());
+        jsonArray.put(jsonObject);
+
+        return jsonObject;
+
+
+    }
     public JSONObject getProduct(Integer id) throws JSONException, СustomException {
         JSONObject jsonObject = new JSONObject();
-        if(!laptopRepository.existsById(id)){
+        if(!repository.existsById(id)){
             throw new СustomException("Пользователь не найден в бд", HttpStatus.NOT_FOUND);
         }
-        Optional<Laptop> date = laptopRepository.findById(id);
+        Optional<T> date = repository.findById(id);
 
         jsonObject.put("id",date.get().getId());
         jsonObject.put("name",date.get().getName());
@@ -50,8 +91,9 @@ public class LaptopService {
     }
 
     public JSONArray getProducts() throws JSONException {
+
         JSONArray jsonArray = new JSONArray();
-        List<Laptop> date = laptopRepository.findAll();
+        List<T> date = repository.findAll();
         for (int k = 0;k<date.size();k++){
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id",date.get(k).getId());
@@ -67,7 +109,7 @@ public class LaptopService {
 
     public HashMap getPaginations() throws JSONException {
 
-        List<Laptop> data = laptopRepository.findAll();
+        List<T> data = repository.findAll();
         return Pagination.getPagination(data);
 
 
@@ -84,7 +126,7 @@ public class LaptopService {
         for (int k = 0;k<st.length;k++){
             arrayList.add(Integer.valueOf(st[k]));
         }
-        List<Laptop> array = laptopRepository.findAllById(arrayList);
+        List<T> array = repository.findAllById(arrayList);
         JSONArray jsonArray = new JSONArray();
         for(int i = 0;i<array.size();i++){
             JSONObject jsonObject = new JSONObject();
@@ -98,5 +140,4 @@ public class LaptopService {
         return jsonArray;
 
     }
-
 }

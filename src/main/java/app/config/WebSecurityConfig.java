@@ -63,7 +63,7 @@ public class WebSecurityConfig {
         http.authorizeHttpRequests((authorizeHttpRequests) ->
                 authorizeHttpRequests.requestMatchers("/registration",
                         "api/users",
-                        "im/{name}/{test}"
+                        "img/{catalog}/{name}"
                         ,"tv/create",
                         "tv/product/{id}","tv/products","tv/pagination","tv/ids",
                         "laptop/create","laptop/product/{id}","laptop/products","laptop/pagination","laptop/ids",
@@ -74,7 +74,7 @@ public class WebSecurityConfig {
                 .addFilter(new AuthenticationFilter(authenticationManager(),jwtComponent, userRepository,resolver))
                 //.cors((arg)->arg.configurationSource((request -> customCorsConfiguration())));
                 .cors((arg)->arg.configurationSource(request -> customCorsConfiguration()));
-                //.httpBasic(Customizer.withDefaults());
+        //.httpBasic(Customizer.withDefaults());
 
         return http.build();
 
@@ -82,14 +82,14 @@ public class WebSecurityConfig {
 
 
     public CorsConfiguration customCorsConfiguration(){
-        CorsConfiguration corsConfiguration = new CustomCorsConfiguration();
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
 
         corsConfiguration.setAllowedOrigins(List.of("http://localhost:3000"));
         corsConfiguration.setAllowedMethods(List.of("GET","POST","OPTIONS","DELETE"));
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Headers", "Size","Authorization, x-xsrf-token, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, " +
                 "Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers"));
-
+        //corsConfiguration.setAllowedHeaders(List.of("Access-Control-Allow-Methods","Access-Control-Allow-Credentials","Cookie","sizes"));
 
         return corsConfiguration.applyPermitDefaultValues();
     }
